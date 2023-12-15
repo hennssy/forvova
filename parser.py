@@ -76,8 +76,6 @@ class Parser():
                     print('ПАР НЕТ')
                     return
                 
-
-                '''СДЕЛАТЬ СОРТИРОВКУ ПО ПОРЯДКУ ПАР'''
                 print(auditory_lessons)
 
         print(text)
@@ -91,7 +89,6 @@ class Parser():
     def parse(self):
         week_day = datetime.weekday(datetime.strptime(self.data['date'], '%d-%m-%Y'))
         if week_day == 6:
-            '''СДЕЛАТЬ RAISE WEEKEND_ERROR ДЛЯ ДАЛЬНЕЙШЕЙ ОБРАБОТКИ'''
             return 'ОШИБКА_ВЫХОДНОЙ'
         
         if self.data['type'] == 'auditories':
@@ -99,7 +96,7 @@ class Parser():
         else:
             self.dates_list = get_dates_list(self.data['date'], week_day, 5)
         
-        session = sessions.FuturesSession(max_workers = 4)
+        session = sessions.FuturesSession(max_workers = 5)
         
         result_dict = {date: session.post('https://www.uc.osu.ru/back_parametr.php', data = {'type_id': self.data['mode'], 'data': date.split()[0]}).result().json() for date in self.dates_list}
         
@@ -119,18 +116,19 @@ class Parser():
             print(e)
 
         result_dict = dict()
-
-        result_dict = {date: [session.post('https://www.uc.osu.ru/generate_data.php', data = {'type': self.data['mode'], 'data': date.split()[0], 'id': key}).result().text for key in \
+        result_dict = {date: [session.post('https://www.uc.osu.ru/generate_data.php', data = {'type': self.data['mode'], 'data': date.split()[0], 'id': key}) for key in \
             keys] for date, keys in temp_dict.items()}
         
+        for date, pages in result_dict.items():
+            for idx, page in enumerate(pages):
+                result_dict[date][idx] = page.result().text
+
         self.transform_result(result_dict)
 
 
 
 
-
-
-
+from datetime import datetime, timedelta
 
 days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']
 
@@ -142,9 +140,18 @@ def get_dates_list(date, week_day, edge):
 
     return dates_list
 
+def return_date(date, offset):
+    temp = datetime.strptime(date, '%d-%m-%Y')
+    res = temp + timedelta(days = offset)
+    day = f'0{res.day}' if res.day <= 9 else res.day
+    month = f'0{res.month}' if res.month <= 9 else res.month
+    year = res.year
+    
+    return f'{day}-{month}-{year}'
 
 
-'''ОНИ НЕ ПОЛНЫЕ, ДОПИШЕШЬ САМ!!!!'''
+
+'''ЭТА ХУЙНЯ НЕ ДОПИСАНА, СЮДА НАДО ДОБАВИТЬ ГРУППЫ ТАМ ГДЕ - НЕПРАВИЛЬНО СТОИТ И Т.Д!!!'''
 TEACHER_ANNOTATIONS = {
     'Лукерина О.А.': 'ЛукеринаО.А.',
 }
